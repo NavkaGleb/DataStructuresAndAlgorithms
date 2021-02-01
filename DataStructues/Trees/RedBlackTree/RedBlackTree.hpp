@@ -53,6 +53,7 @@ namespace Ng {
     private:
         void RotateLeft(Node* node);
         void RotateRight(Node* node);
+        void Fix(Node* node);
 
         Node* m_Root;
         int   m_Nodes;
@@ -108,11 +109,11 @@ namespace Ng {
     bool RedBlackTree<T>::IsExists(const T& value) const {
         Node* node = m_Root;
 
-        while (node && value != node->Value) {
-            if (value < node->Value)
-                node = node->Left;
+        while (node && value != node->m_Value) {
+            if (value < node->m_Value)
+                node = node->m_Left;
             else
-                node = node->Right;
+                node = node->m_Right;
         }
 
         return node;
@@ -120,10 +121,24 @@ namespace Ng {
 
     template <typename T>
     typename RedBlackTree<T>::Node* RedBlackTree<T>::PushNode(const T& value) {
-        Node* node = new Node(value);
-
         if (!m_Root)
-            return m_Root = node;
+            return m_Root = new Node(value);
+
+        Node* currentNode = m_Root;
+
+        while (currentNode)
+            currentNode = currentNode->m_Value < value ?
+                          currentNode->m_Left :
+                          currentNode->m_Right;
+
+        auto* node = new Node(value, Node::Color::Black, currentNode->m_Parent);
+
+        if (node->m_Value < node->m_Parent->m_Value)
+            node->m_Parent->m_Left = node;
+        else
+            node->m_Parent->m_Right = node;
+
+        Fix(node);
     }
 
     template <typename T>
@@ -139,6 +154,55 @@ namespace Ng {
     template <typename T>
     void RedBlackTree<T>::RotateRight(Node* node) {
 
+    }
+
+    template <typename T>
+    void RedBlackTree<T>::Fix(Node* node) {
+        Node* parent      = node->m_Parent;
+        Node* grandParent = parent->m_Parent;
+
+        while (parent->m_Color == Node::Color::Red && node != m_Root) {
+            if (parent == grandParent->m_Left) {
+                Node* uncle = grandParent->m_Right;
+
+                if (uncle->m_Color == Node::Color::Red) {
+                    parent->m_Color      = Node::Color::Black;
+                    uncle->m_Color       = Node::Color::Black;
+                    grandParent->m_Color = Node::Color::Red;
+
+                    node = grandParent;
+                } else {
+                    if (node == parent->m_Right) {
+                        node = parent;
+                        RotateLeft(node);
+                    }
+
+                    parent->m_Color      = Node::Color::Black;
+                    grandParent->m_Color = Node::Color::Red;
+                    RotateRight(grandParent);
+                }
+            } else {
+                Node* uncle = grandParent->m_Left;
+
+                if (uncle->m_Color == Node::Color::Red) {
+                    parent->m_Color      = Node::Color::Black;
+                    uncle->m_Color       = Node::Color::Black;
+                    grandParent->m_Color = Node::Color::Red;
+
+                    node = grandParent;
+                } else {
+                    if (node == parent->m_Left)
+                        RotateRight(node = parent);
+
+                    parent->m_Color      = Node::Color::Black;
+                    grandParent->m_Color = Node::Color::Red;
+
+                    RotateLeft(grandParent);
+                }
+            }
+        }
+
+        m_Root->m_Color = Node::Color::Black;
     }
 
 } // namespace Ng

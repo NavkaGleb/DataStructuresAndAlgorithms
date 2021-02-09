@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 namespace Ng {
 
     //////////////////////////////////////////////////////////////////////////////
@@ -46,6 +48,8 @@ namespace Ng {
         [[nodiscard]] inline int GetNodes() const { return m_Nodes; }
 
         [[nodiscard]] bool IsExists(const T& value) const;
+        [[nodiscard]] std::optional<T> GetMin() const;
+        [[nodiscard]] std::optional<T> GetMax() const;
 
         Node* PushNode(const T& value);
         void PopNode(const T& value);
@@ -109,14 +113,36 @@ namespace Ng {
     bool RedBlackTree<T>::IsExists(const T& value) const {
         Node* node = m_Root;
 
-        while (node && value != node->m_Value) {
-            if (value < node->m_Value)
-                node = node->m_Left;
-            else
-                node = node->m_Right;
-        }
+        while (node && value != node->m_Value)
+            node = node->m_Value < value ? node->m_Left : node->m_Right;
 
         return node;
+    }
+
+    template <typename T>
+    std::optional<T> RedBlackTree<T>::GetMin() const {
+        if (!m_Root)
+            return std::nullopt;
+
+        Node* node = m_Root;
+
+        while (node->m_Left)
+            node = node->m_Left;
+
+        return node->m_Value;
+    }
+
+    template <typename T>
+    std::optional<T> RedBlackTree<T>::GetMax() const {
+        if (!m_Root)
+            return std::nullopt;
+
+        Node* node = m_Root;
+
+        while (node->m_Right)
+            node = node->m_Right;
+
+        return node->m_Value;
     }
 
     template <typename T>
@@ -148,12 +174,46 @@ namespace Ng {
 
     template <typename T>
     void RedBlackTree<T>::RotateLeft(Node* node) {
+        Node* right = node->m_Right;
 
+        node->m_Right = right->m_Left;
+
+        if (right->m_Left)
+            right->m_Left->m_Parent = node;
+
+        right->m_Parent = node->m_Parent;
+
+        if (!node->m_Parent)
+            m_Root = right;
+        else if (node == node->m_Parent->m_Left)
+            node->m_Parent->m_Left = right;
+        else
+            node->m_Parent->m_Right = right;
+
+        right->m_Left = node;
+        node->m_Parent = right;
     }
 
     template <typename T>
     void RedBlackTree<T>::RotateRight(Node* node) {
+        Node* left = node->m_Right;
 
+        node->m_Left = left->m_Right;
+
+        if (left->m_Right)
+            left->m_Right->m_Parent = node;
+
+        left->m_Parent = node->m_Parent;
+
+        if (!node->m_Parent)
+            m_Root = left;
+        else if (node == node->m_Parent->m_Right)
+            node->m_Parent->m_Right = left;
+        else
+            node->m_Parent->m_Left = left;
+
+        left->m_Right = node;
+        node->m_Parent = left;
     }
 
     template <typename T>

@@ -16,7 +16,6 @@ namespace Ng {
 
             Node();
             explicit Node(const T& value,
-                          const Color& color = Color::Black,
                           Node* parent = nullptr,
                           Node* left = nullptr,
                           Node* right = nullptr);
@@ -43,7 +42,6 @@ namespace Ng {
         explicit RedBlackTree(Node* root = nullptr);
         virtual ~RedBlackTree();
 
-        [[nodiscard]] inline Node* GetRoot() { return m_Root; }
         [[nodiscard]] inline const Node* GetRoot() const { return m_Root; }
         [[nodiscard]] inline int GetNodes() const { return m_Nodes; }
 
@@ -51,218 +49,30 @@ namespace Ng {
         [[nodiscard]] std::optional<T> GetMin() const;
         [[nodiscard]] std::optional<T> GetMax() const;
 
-        Node* PushNode(const T& value);
-        void PopNode(const T& value);
+        Node* Push(const T& value);
+        void Pop(const T& value);
+
+        void Print() const;
 
     private:
+        [[nodiscard]] std::optional<T> GetMin(Node* node) const;
+        [[nodiscard]] std::optional<T> GetMax(Node* node) const;
+
+        [[nodiscard]] Node* GetMinNode(Node* node) const;
+        [[nodiscard]] Node* GetMaxNode(Node* node) const;
+
         void RotateLeft(Node* node);
         void RotateRight(Node* node);
-        void Fix(Node* node);
+        void PushFix(Node* node);
+        void PopFix(Node* node);
+        void Transplant(Node* first, Node* second);
+        void Print(Node* node, std::string indent, bool last) const;
 
         Node* m_Root;
         int   m_Nodes;
 
     }; // class RedBlackTree
 
-    //////////////////////////////////////////////////////////////////////////////
-    /// Source
-    //////////////////////////////////////////////////////////////////////////////
-    /// class RedBlackTree::Node
-    //////////////////////////////////////////////////////////////////////////////
-    template <typename T>
-    RedBlackTree<T>::Node::Node() :
-        m_Value(T()),
-        m_Color(Color::Black),
-        m_Parent(nullptr),
-        m_Left(nullptr),
-        m_Right(nullptr) { }
-
-    template <typename T>
-    RedBlackTree<T>::Node::Node(const T& value, const Color& color, Node* parent, Node* left, Node* right) :
-        m_Value(value),
-        m_Color(color),
-        m_Parent(parent),
-        m_Left(left),
-        m_Right(right) { }
-
-    template <typename T>
-    RedBlackTree<T>::Node::~Node() {
-        delete m_Left;
-        delete m_Right;
-    }
-
-    //////////////////////////////////////////////////////////////////////////////
-    /// class RedBlackTree
-    //////////////////////////////////////////////////////////////////////////////
-    template <typename T>
-    RedBlackTree<T>::RedBlackTree(const T& value) :
-        m_Root(new Node(value)),
-        m_Nodes(1) {}
-
-    template <typename T>
-    RedBlackTree<T>::RedBlackTree(Node* root) :
-        m_Root(root),
-        m_Nodes(root ? 1 : 0) { }
-
-    template <typename T>
-    RedBlackTree<T>::~RedBlackTree() {
-        delete m_Root;
-    }
-
-    template <typename T>
-    bool RedBlackTree<T>::IsExists(const T& value) const {
-        Node* node = m_Root;
-
-        while (node && value != node->m_Value)
-            node = node->m_Value < value ? node->m_Left : node->m_Right;
-
-        return node;
-    }
-
-    template <typename T>
-    std::optional<T> RedBlackTree<T>::GetMin() const {
-        if (!m_Root)
-            return std::nullopt;
-
-        Node* node = m_Root;
-
-        while (node->m_Left)
-            node = node->m_Left;
-
-        return node->m_Value;
-    }
-
-    template <typename T>
-    std::optional<T> RedBlackTree<T>::GetMax() const {
-        if (!m_Root)
-            return std::nullopt;
-
-        Node* node = m_Root;
-
-        while (node->m_Right)
-            node = node->m_Right;
-
-        return node->m_Value;
-    }
-
-    template <typename T>
-    typename RedBlackTree<T>::Node* RedBlackTree<T>::PushNode(const T& value) {
-        if (!m_Root)
-            return m_Root = new Node(value);
-
-        Node* currentNode = m_Root;
-
-        while (currentNode)
-            currentNode = currentNode->m_Value < value ?
-                          currentNode->m_Left :
-                          currentNode->m_Right;
-
-        auto* node = new Node(value, Node::Color::Black, currentNode->m_Parent);
-
-        if (node->m_Value < node->m_Parent->m_Value)
-            node->m_Parent->m_Left = node;
-        else
-            node->m_Parent->m_Right = node;
-
-        Fix(node);
-    }
-
-    template <typename T>
-    void RedBlackTree<T>::PopNode(const T& value) {
-
-    }
-
-    template <typename T>
-    void RedBlackTree<T>::RotateLeft(Node* node) {
-        Node* right = node->m_Right;
-
-        node->m_Right = right->m_Left;
-
-        if (right->m_Left)
-            right->m_Left->m_Parent = node;
-
-        right->m_Parent = node->m_Parent;
-
-        if (!node->m_Parent)
-            m_Root = right;
-        else if (node == node->m_Parent->m_Left)
-            node->m_Parent->m_Left = right;
-        else
-            node->m_Parent->m_Right = right;
-
-        right->m_Left = node;
-        node->m_Parent = right;
-    }
-
-    template <typename T>
-    void RedBlackTree<T>::RotateRight(Node* node) {
-        Node* left = node->m_Right;
-
-        node->m_Left = left->m_Right;
-
-        if (left->m_Right)
-            left->m_Right->m_Parent = node;
-
-        left->m_Parent = node->m_Parent;
-
-        if (!node->m_Parent)
-            m_Root = left;
-        else if (node == node->m_Parent->m_Right)
-            node->m_Parent->m_Right = left;
-        else
-            node->m_Parent->m_Left = left;
-
-        left->m_Right = node;
-        node->m_Parent = left;
-    }
-
-    template <typename T>
-    void RedBlackTree<T>::Fix(Node* node) {
-        Node* parent      = node->m_Parent;
-        Node* grandParent = parent->m_Parent;
-
-        while (parent->m_Color == Node::Color::Red && node != m_Root) {
-            if (parent == grandParent->m_Left) {
-                Node* uncle = grandParent->m_Right;
-
-                if (uncle->m_Color == Node::Color::Red) {
-                    parent->m_Color      = Node::Color::Black;
-                    uncle->m_Color       = Node::Color::Black;
-                    grandParent->m_Color = Node::Color::Red;
-
-                    node = grandParent;
-                } else {
-                    if (node == parent->m_Right) {
-                        node = parent;
-                        RotateLeft(node);
-                    }
-
-                    parent->m_Color      = Node::Color::Black;
-                    grandParent->m_Color = Node::Color::Red;
-                    RotateRight(grandParent);
-                }
-            } else {
-                Node* uncle = grandParent->m_Left;
-
-                if (uncle->m_Color == Node::Color::Red) {
-                    parent->m_Color      = Node::Color::Black;
-                    uncle->m_Color       = Node::Color::Black;
-                    grandParent->m_Color = Node::Color::Red;
-
-                    node = grandParent;
-                } else {
-                    if (node == parent->m_Left)
-                        RotateRight(node = parent);
-
-                    parent->m_Color      = Node::Color::Black;
-                    grandParent->m_Color = Node::Color::Red;
-
-                    RotateLeft(grandParent);
-                }
-            }
-        }
-
-        m_Root->m_Color = Node::Color::Black;
-    }
+#include "RedBlackTree.inl"
 
 } // namespace Ng

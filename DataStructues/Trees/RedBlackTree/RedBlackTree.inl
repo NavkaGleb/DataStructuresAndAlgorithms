@@ -12,7 +12,7 @@ RedBlackTree<T>::Node::Node() :
 template <typename T>
 RedBlackTree<T>::Node::Node(const T& value, Node* parent, Node* left, Node* right) :
     m_Value(value),
-    m_Color(Node::Color::Black),
+    m_Color(Node::Color::Red),
     m_Parent(parent),
     m_Left(left),
     m_Right(right) { }
@@ -64,7 +64,10 @@ std::optional<T> RedBlackTree<T>::GetMax() const {
 template <typename T>
 typename RedBlackTree<T>::Node* RedBlackTree<T>::Push(const T& value) {
     if (!m_Root) {
-        return m_Root = new Node(value);
+        m_Root = new Node(value);
+        m_Root->m_Color = Node::Color::Black;
+
+        return m_Root;
 //        ->_size = 1;
     }
 
@@ -149,7 +152,7 @@ void RedBlackTree<T>::Pop(const T& value) {
 
 template <typename T>
 void RedBlackTree<T>::Print() const {
-    Print(m_Root, std::string(), true);
+    Print(m_Root, 1, "Root");
 }
 
 template <typename T>
@@ -192,12 +195,14 @@ typename RedBlackTree<T>::Node* RedBlackTree<T>::GetMaxNode(Node* node) const {
 
 template <typename T>
 void RedBlackTree<T>::RotateLeft(Node* node) {
-    Node* right = node->m_Right;
+    //   c      =>      s
+    //  / \            / \
+    // u   s    =>    c   r
+    //    / \        / \
+    //   l   r  =>  u   l
 
-    node->m_Right = right->m_Left;
-
-    if (right->m_Left)
-        right->m_Left->m_Parent = node;
+    Node* right     = node->m_Right;
+    Node* rightLeft = right->m_Left;
 
     right->m_Parent = node->m_Parent;
 
@@ -208,76 +213,95 @@ void RedBlackTree<T>::RotateLeft(Node* node) {
     else
         node->m_Parent->m_Right = right;
 
-    right->m_Left = node;
     node->m_Parent = right;
+    right->m_Left = node;
+    node->m_Right = rightLeft;
+
+    if (rightLeft)
+        rightLeft->m_Parent = node;
 }
 
 template <typename T>
 void RedBlackTree<T>::RotateRight(Node* node) {
-    Node* left = node->m_Right;
+    //     c    =>    u
+    //    / \        / \
+    //   u   s  =>  l   c
+    //  / \            / \
+    // l   r    =>    r   s
 
-    node->m_Left = left->m_Right;
-
-    if (left->m_Right)
-        left->m_Right->m_Parent = node;
+    Node* left      = node->m_Left;
+    Node* leftRight = left->m_Right;
 
     left->m_Parent = node->m_Parent;
 
     if (!node->m_Parent)
         m_Root = left;
-    else if (node == node->m_Parent->m_Right)
-        node->m_Parent->m_Right = left;
-    else
+    else if (node == node->m_Parent->m_Left)
         node->m_Parent->m_Left = left;
+    else
+        node->m_Parent->m_Right = left;
 
-    left->m_Right = node;
     node->m_Parent = left;
+    left->m_Right  = node;
+    node->m_Left   = leftRight;
+
+    if (leftRight)
+        leftRight->m_Parent = node;
 }
 
 template <typename T>
 void RedBlackTree<T>::PushFix(Node* node) {
-    Node* parent      = node->m_Parent;
-    Node* grandParent = node->m_Parent ? parent->m_Parent : nullptr;
+    while (node->m_Parent && node->m_Parent->m_Color == Node::Color::Red) {
+        Node* parent = node->m_Parent;
+        Node* uncle  = node->m_Parent->m_Parent && node->m_Parent->m_Parent->m_Left == node->m_Parent ?
+                       node->m_Parent->m_Parent->m_Right :
+                       node->m_Parent->m_Parent->m_Left;
 
-    while (parent && parent->m_Color == Node::Color::Red && node != m_Root) {
-        if (parent == grandParent->m_Left) {
-            Node* uncle = grandParent->m_Right;
+        // uncle is leaf => color is black
+        if (!uncle || uncle->m_Color == Node::Color::Black) {
+            // if uncle is at right, parent at left.
+            if (parent->m_Parent->m_Left == parent) {
+                // from shape triangle to line
+                if (parent->m_Left != node) {
+                    RotateLeft(parent);
 
-            if (uncle->m_Color == Node::Color::Red) {
-                parent->m_Color      = Node::Color::Black;
-                uncle->m_Color       = Node::Color::Black;
-                grandParent->m_Color = Node::Color::Red;
-
-                node = grandParent;
-            } else {
-                if (node == parent->m_Right) {
                     node = parent;
-                    RotateLeft(node);
+                    parent = node->m_Parent;
                 }
 
-                parent->m_Color      = Node::Color::Black;
-                grandParent->m_Color = Node::Color::Red;
-                RotateRight(grandParent);
-            }
-        } else {
-            Node* uncle = grandParent->m_Left;
+                // grand parent rotation from line shape
+                if (parent->m_Left == node) {
+                    parent->m_Color           = Node::Color::Black;
+                    parent->m_Parent->m_Color = Node::Color::Red;
 
-            if (uncle->m_Color == Node::Color::Red) {
-                parent->m_Color      = Node::Color::Black;
-                uncle->m_Color       = Node::Color::Black;
-                grandParent->m_Color = Node::Color::Red;
-
-                node = grandParent;
+                    RotateRight(parent->m_Parent);
+                    // will break because parent color has changed to black.
+                }
             } else {
-                if (node == parent->m_Left)
-                    RotateRight(node = parent);
+                // from shape triangle to line
+                if (parent->m_Right != node) {
+                    RotateRight(parent);
 
-                parent->m_Color      = Node::Color::Black;
-                grandParent->m_Color = Node::Color::Red;
+                    node = parent;
+                    parent = node->m_Parent;
+                }
 
-                RotateLeft(grandParent);
+                // grand parent rotation from line shape
+                if (parent->m_Right == node) {
+                    parent->m_Color           = Node::Color::Black;
+                    parent->m_Parent->m_Color = Node::Color::Red;
+
+                    RotateLeft(parent->m_Parent);
+                }
             }
+        } else if (uncle->m_Color == Node::Color::Red) {
+            parent->m_Color = Node::Color::Black;
+            uncle->m_Color = Node::Color::Black;
+            parent->m_Parent->m_Color = Node::Color::Red;
+
+            node = parent->m_Parent;
         }
+
     }
 
     m_Root->m_Color = Node::Color::Black;
@@ -301,22 +325,30 @@ void RedBlackTree<T>::Transplant(Node* first, Node* second) {
 }
 
 template <typename T>
-void RedBlackTree<T>::Print(Node* node, std::string indent, bool last) const {
-    if (!node)
+void RedBlackTree<T>::Print(const Node* node, const int& level, const char* caption) const {
+    if (!node) {
+
+        std::cout << caption << ": null" << std::endl;
         return;
 
-    std::cout << indent;
-    if (last) {
-        std::cout << "R----";
-        indent += "   ";
-    } else {
-        std::cout << "L----";
-        indent += "|  ";
     }
 
-    std::string sColor = node->m_Color == Node::Color::Red ? "Red" : "Black";
-    std::cout << node->m_Value << "(" << sColor << ")" << std::endl;
+    std::cout << caption << ": " << *node;
 
-    Print(node->m_Left,  indent, false);
-    Print(node->m_Right, indent, true);
+    if (node->m_Left || node->m_Right) {
+
+        std::cout << " (" << std::endl;
+
+        for (int i = 0; i < level; i++) std::cout << "| ";
+        Print(node->m_Left, level + 1, "left");
+
+        for (int i = 0; i < level; i++) std::cout << "| ";
+        Print(node->m_Right, level + 1, "right");
+
+        for (int i = 0; i < level - 1; i++) std::cout << "| ";
+        std::cout << ")";
+
+    }
+
+    std::cout << std::endl;
 }

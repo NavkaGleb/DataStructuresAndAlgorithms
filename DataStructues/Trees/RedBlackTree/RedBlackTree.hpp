@@ -27,6 +27,20 @@ namespace Ng {
             [[nodiscard]] inline const Node* GetLeft() const { return m_Left; }
             [[nodiscard]] inline const Node* GetRight() const { return m_Right; }
 
+            friend std::ostream& operator<<(std::ostream& ostream, const Node& node) {
+
+                ostream << node.m_Value << " {l: ";
+
+                if (node.m_Left) ostream << node.m_Left->m_Value << ", r: ";
+                else ostream << "null, r: ";
+
+                if (node.m_Right) ostream << node.m_Right->m_Value << "}";
+                else ostream << "null}";
+
+                return ostream;
+
+            }
+
             friend class RedBlackTree;
 
         private:
@@ -66,7 +80,7 @@ namespace Ng {
         void PushFix(Node* node);
         void PopFix(Node* node);
         void Transplant(Node* first, Node* second);
-        void Print(Node* node, std::string indent, bool last) const;
+        void Print(const Node* node, const int& level, const char* caption) const;
 
         Node* m_Root;
         int   m_Nodes;

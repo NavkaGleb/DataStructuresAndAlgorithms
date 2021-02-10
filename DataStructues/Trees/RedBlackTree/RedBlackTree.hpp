@@ -27,21 +27,10 @@ namespace Ng {
             [[nodiscard]] inline const Node* GetLeft() const { return m_Left; }
             [[nodiscard]] inline const Node* GetRight() const { return m_Right; }
 
-            friend std::ostream& operator<<(std::ostream& ostream, const Node& node) {
-
-                ostream << node.m_Value << " {l: ";
-
-                if (node.m_Left) ostream << node.m_Left->m_Value << ", r: ";
-                else ostream << "null, r: ";
-
-                if (node.m_Right) ostream << node.m_Right->m_Value << "}";
-                else ostream << "null}";
-
-                return ostream;
-
-            }
-
             friend class RedBlackTree;
+
+        private:
+            void Print() const;
 
         private:
             T     m_Value;
@@ -59,6 +48,7 @@ namespace Ng {
         [[nodiscard]] inline const Node* GetRoot() const { return m_Root; }
         [[nodiscard]] inline int GetNodes() const { return m_Nodes; }
 
+        [[nodiscard]] int GetHeight() const;
         [[nodiscard]] bool IsExists(const T& value) const;
         [[nodiscard]] std::optional<T> GetMin() const;
         [[nodiscard]] std::optional<T> GetMax() const;
@@ -69,16 +59,22 @@ namespace Ng {
         void Print() const;
 
     private:
+        [[nodiscard]] int GetHeight(Node* node) const;
+
         [[nodiscard]] std::optional<T> GetMin(Node* node) const;
         [[nodiscard]] std::optional<T> GetMax(Node* node) const;
 
         [[nodiscard]] Node* GetMinNode(Node* node) const;
         [[nodiscard]] Node* GetMaxNode(Node* node) const;
 
+        [[nodiscard]] Node* GetSuccessor(Node* node) const;
+
         void RotateLeft(Node* node);
         void RotateRight(Node* node);
+
         void PushFix(Node* node);
-        void PopFix(Node* node);
+        void PopFix(Node* child, Node* parent);
+
         void Transplant(Node* first, Node* second);
         void Print(const Node* node, const int& level, const char* caption) const;
 

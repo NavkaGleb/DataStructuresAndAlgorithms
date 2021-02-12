@@ -2,11 +2,8 @@
 
 #include <optional>
 
-namespace Ng {
+namespace DataStructures {
 
-    //////////////////////////////////////////////////////////////////////////////
-    /// Header
-    //////////////////////////////////////////////////////////////////////////////
     template <typename T>
     class RedBlackTree {
     public:
@@ -46,14 +43,16 @@ namespace Ng {
         virtual ~RedBlackTree();
 
         [[nodiscard]] inline const Node* GetRoot() const { return m_Root; }
-        [[nodiscard]] inline int GetNodes() const { return m_Nodes; }
+        [[nodiscard]] inline int GetSize() const { return m_Size; }
 
         [[nodiscard]] int GetHeight() const;
         [[nodiscard]] bool IsExists(const T& value) const;
+        [[nodiscard]] Node* GetNode(const T& value);
+        [[nodiscard]] const Node* GetNode(const T& value) const;
         [[nodiscard]] std::optional<T> GetMin() const;
         [[nodiscard]] std::optional<T> GetMax() const;
 
-        Node* Push(const T& value);
+        T& Push(const T& value);
         void Pop(const T& value);
 
         void Print() const;
@@ -73,16 +72,15 @@ namespace Ng {
         void RotateRight(Node* node);
 
         void PushFix(Node* node);
-        void PopFix(Node* child, Node* parent);
+        void PopFix(Node* node);
 
-        void Transplant(Node* first, Node* second);
         void Print(const Node* node, const int& level, const char* caption) const;
 
         Node* m_Root;
-        int   m_Nodes;
+        int   m_Size;
 
     }; // class RedBlackTree
 
 #include "RedBlackTree.inl"
 
-} // namespace Ng
+} // namespace DataStructures

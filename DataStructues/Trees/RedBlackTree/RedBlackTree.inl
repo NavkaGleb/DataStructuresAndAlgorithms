@@ -25,7 +25,7 @@ RedBlackTree<T>::Node::~Node() {
 
 template <typename T>
 void RedBlackTree<T>::Node::Print() const {
-    std::cout << m_Value << " {C: ";
+    std::cout << m_Value << " {C:";
 
     std::cout << (m_Color == Node::Color::Black ? "Black"                          : "Red" ) << ", L: ";
     std::cout << (m_Left                        ? std::to_string(m_Left->m_Value)  : "Null") << ", R: ";
@@ -37,13 +37,11 @@ void RedBlackTree<T>::Node::Print() const {
 //////////////////////////////////////////////////////////////////////////////
 template <typename T>
 RedBlackTree<T>::RedBlackTree(const T& value) :
-    m_Root(new Node(value)),
-    m_Nodes(1) {}
+    m_Root(new Node(value)) { }
 
 template <typename T>
 RedBlackTree<T>::RedBlackTree(Node* root) :
-    m_Root(root),
-    m_Nodes(root ? 1 : 0) { }
+    m_Root(root) { }
 
 template <typename T>
 RedBlackTree<T>::~RedBlackTree() {
@@ -60,7 +58,27 @@ bool RedBlackTree<T>::IsExists(const T& value) const {
     Node* node = m_Root;
 
     while (node && value != node->m_Value)
-        node = node->m_Value < value ? node->m_Left : node->m_Right;
+        node = node->m_Value > value ? node->m_Left : node->m_Right;
+
+    return node;
+}
+
+template <typename T>
+typename RedBlackTree<T>::Node* RedBlackTree<T>::GetNode(const T& value) {
+    Node* node = m_Root;
+
+    while (node && value != node->m_Value)
+        node = node->m_Value > value ? node->m_Left : node->m_Right;
+
+    return node;
+}
+
+template <typename T>
+const typename RedBlackTree<T>::Node* RedBlackTree<T>::GetNode(const T& value) const {
+    Node* node = m_Root;
+
+    while (node && value != node->m_Value)
+        node = node->m_Value > value ? node->m_Left : node->m_Right;
 
     return node;
 }
@@ -76,29 +94,26 @@ std::optional<T> RedBlackTree<T>::GetMax() const {
 }
 
 template <typename T>
-typename RedBlackTree<T>::Node* RedBlackTree<T>::Push(const T& value) {
+T& RedBlackTree<T>::Push(const T& value) {
     if (!m_Root) {
         m_Root = new Node(value);
         m_Root->m_Color = Node::Color::Black;
 
-        return m_Root;
-//        ->_size = 1;
+        return m_Root->m_Value;
     }
 
     Node* node   = m_Root;
     Node* parent = nullptr;
 
-
     while (node) {
-//        current_node->_size++;
+        if (node->m_Value == value)
+            return node->m_Value;
 
         parent = node;
-
-        if (node->m_Value > value)
-            node = node->m_Left;
-        else
-            node = node->m_Right;
+        node   = node->m_Value > value ? node->m_Left : node->m_Right;
     }
+
+    ++m_Size;
 
     node = new Node(value, parent);
 
@@ -109,20 +124,17 @@ typename RedBlackTree<T>::Node* RedBlackTree<T>::Push(const T& value) {
 
     PushFix(node);
 
-    return node;
+    return node->m_Value;
 }
 
 template <typename T>
 void RedBlackTree<T>::Pop(const T& value) {
-    Node* node = m_Root;
+    Node* node = GetNode(value);
 
-    while (node && node->m_Value != value)
-        node = node->m_Value > value ? node->m_Left : node->m_Right;
-
-    if (!node) {
-        std::cout << "Fuck!" << std::endl;
+    if (!node)
         return;
-    }
+
+    --m_Size;
 
     Node* parent = node->m_Parent;
     Node* child  = nullptr;
@@ -147,6 +159,9 @@ void RedBlackTree<T>::Pop(const T& value) {
             parent->m_Left = child;
         else
             parent->m_Right = child;
+
+        if (child)
+            child->m_Parent = parent;
     } else {
         m_Root = child;
 
@@ -154,8 +169,13 @@ void RedBlackTree<T>::Pop(const T& value) {
             m_Root->m_Parent = nullptr;
     }
 
-    if (node->m_Color == Node::Color::Black)
-        PopFix(child, parent);
+    if (node->m_Color == Node::Color::Black && child)
+        PopFix(child);
+
+    node->m_Left  = nullptr;
+    node->m_Right = nullptr;
+
+    delete node;
 }
 
 template <typename T>
@@ -208,25 +228,17 @@ typename RedBlackTree<T>::Node* RedBlackTree<T>::GetMaxNode(Node* node) const {
 
 template <typename T>
 typename RedBlackTree<T>::Node* RedBlackTree<T>::GetSuccessor(Node* node) const {
-    Node* result;
+    if (node->m_Right)
+        return GetMinNode(node->m_Right);
 
-    if (node->m_Left) {
-        result = node->m_Left;
+    Node* successor = node->m_Parent;
 
-        while (result->m_Right)
-            result = result->m_Right;
-    } else {
-        result = node->m_Parent;
-
-        while (result && result->m_Left == node) {
-            node = result;
-            node = result->m_Parent;
-        }
-
-        result = result && result->m_Right == node ? result : nullptr;
+    while (successor && successor->m_Right == node) {
+        node      = successor;
+        successor = successor->m_Parent;
     }
 
-    return result;
+    return successor;
 }
 
 template <typename T>
@@ -240,7 +252,7 @@ void RedBlackTree<T>::RotateLeft(Node* node) {
     Node* right     = node->m_Right;
     Node* rightLeft = right->m_Left;
 
-    right->m_Parent = node->m_Parent;
+    right->m_Parent   = node->m_Parent;
 
     if (!node->m_Parent)
         m_Root = right;
@@ -268,7 +280,7 @@ void RedBlackTree<T>::RotateRight(Node* node) {
     Node* left      = node->m_Left;
     Node* leftRight = left->m_Right;
 
-    left->m_Parent = node->m_Parent;
+    left->m_Parent   = node->m_Parent;
 
     if (!node->m_Parent)
         m_Root = left;
@@ -344,157 +356,90 @@ void RedBlackTree<T>::PushFix(Node* node) {
 }
 
 template <typename T>
-void RedBlackTree<T>::PopFix(Node* child, Node* parent) {
-    while (true) {
-        if (child == m_Root) {
-            child->m_Color = Node::Color::Black;
-            break;
-        }
+void RedBlackTree<T>::PopFix(Node* node) {
+    while (node != m_Root && node->m_Color == Node::Color::Black) {
+        Node* parent = node->m_Parent;
 
-        parent = child->m_Parent;
-
-        if (parent->m_Left == child) {
-            Node *sibling = parent->m_Right;
+        if (parent->m_Left == node) {
+            Node* sibling = parent->m_Right;
 
             if (sibling->m_Color == Node::Color::Red) {
-                parent->m_Color = Node::Color::Red;
                 sibling->m_Color = Node::Color::Black;
+                parent->m_Color  = Node::Color::Red;
+
+                RotateLeft(parent);
+                sibling = parent->m_Right;
+            }
+
+            if ((!sibling->m_Left || sibling->m_Left->m_Color == Node::Color::Black) &&
+                (!sibling->m_Right || sibling->m_Right->m_Color == Node::Color::Black)) {
+
+                sibling->m_Color = Node::Color::Red;
+                node             = parent;
+                parent           = node->m_Parent;
+            } else if (!sibling->m_Right || sibling->m_Right->m_Color == Node::Color::Black) {
+                sibling->m_Color = Node::Color::Red;
+
+                RotateRight(sibling);
+                sibling = parent->m_Right;
+            }
+
+            if (parent) {
+                sibling->m_Color = parent->m_Color;
+                parent->m_Color  = Node::Color::Black;
+
+                if (sibling->m_Right)
+                    sibling->m_Right->m_Color = Node::Color::Black;
 
                 RotateLeft(parent);
             }
 
-            sibling = parent->m_Right;
-
-            // parent is black, sibling, and sibling's children are all black
-            if (parent->m_Color           == Node::Color::Black &&
-                sibling->m_Color          == Node::Color::Black &&
-                sibling->m_Left->m_Color  == Node::Color::Black &&
-                sibling->m_Right->m_Color == Node::Color::Black) {
-
-                sibling->m_Color = Node::Color::Red;
-                child = parent;
-
-                continue;
-            }
-
-            // parent is red, sibling, and sibling's children are all black
-            if (parent->m_Color           == Node::Color::Red &&
-                sibling->m_Color          == Node::Color::Black &&
-                sibling->m_Left->m_Color  == Node::Color::Black &&
-                sibling->m_Right->m_Color == Node::Color::Black) {
-
-                parent->m_Color = Node::Color::Black;
-                sibling->m_Color = Node::Color::Red;
-
-                break;
-            }
-
-            // above cases sibling children are all back, now reduce one of sibling child is red cases:
-            // if sibling's left is red, sibling's right is black (triangle pattern again)
-            if (sibling->m_Color == Node::Color::Black &&
-                sibling->m_Left->m_Color == Node::Color::Red &&
-                sibling->m_Right->m_Color == Node::Color::Black) {
-
-                sibling->m_Color = Node::Color::Red;
-                sibling->m_Left->m_Color = Node::Color::Black;
-            }
-
-            sibling = parent->m_Right;
-
-            // sibling's left is black, sibling's right is red, sibling is black
-            // since one of sibling child is red cases are are reduce to only this case
-            // now compare to current node again.
-            if (sibling->m_Color          == Node::Color::Black &&
-                sibling->m_Right->m_Color == Node::Color::Red) {
-
-                sibling->m_Color          = parent->m_Color;
-                parent->m_Color           = Node::Color::Black;
-                sibling->m_Right->m_Color = Node::Color::Black;
-
-                RotateLeft(parent);
-                break;
-            }
+            node = m_Root;
         } else {
             Node* sibling = parent->m_Left;
 
             if (sibling->m_Color == Node::Color::Red) {
-                parent->m_Color = Node::Color::Red;
                 sibling->m_Color = Node::Color::Black;
+                parent->m_Color  = Node::Color::Red;
 
                 RotateRight(parent);
+                sibling = parent->m_Left;
             }
 
-            sibling = parent->m_Left;
-
-            // parent is black, sibling, and sibling's children are all black
-            if (parent->m_Color           == Node::Color::Black &&
-                sibling->m_Color          == Node::Color::Black &&
-                sibling->m_Left->m_Color  == Node::Color::Black &&
-                sibling->m_Right->m_Color == Node::Color::Black) {
+            if ((!sibling->m_Left || sibling->m_Left->m_Color == Node::Color::Black) &&
+                (!sibling->m_Right || sibling->m_Right->m_Color == Node::Color::Black)) {
 
                 sibling->m_Color = Node::Color::Red;
-                child = parent;
+                node             = parent;
+                parent           = node->m_Parent;
+            } else if (!sibling->m_Left || sibling->m_Left->m_Color == Node::Color::Black) {
+                sibling->m_Color = Node::Color::Red;
 
-                continue;
+                RotateLeft(sibling);
+                sibling = parent->m_Left;
             }
 
-            // parent is red, sibling, and sibling's children are all black
-            if (parent->m_Color           == Node::Color::Red &&
-                sibling->m_Color          == Node::Color::Black &&
-                sibling->m_Left->m_Color  == Node::Color::Black &&
-                sibling->m_Right->m_Color == Node::Color::Black) {
-
+            if (parent) {
+                sibling->m_Color = parent->m_Color;
                 parent->m_Color  = Node::Color::Black;
-                sibling->m_Color = Node::Color::Red;
 
-                break;
-            }
-
-            // above cases sibling children are all back, now reduce one of sibling child is red cases:
-            // if sibling's left is red, sibling's right is black (triangle pattern again)
-            if (sibling->m_Color          == Node::Color::Black &&
-                sibling->m_Left->m_Color  == Node::Color::Black &&
-                sibling->m_Right->m_Color == Node::Color::Red) {
-
-                sibling->m_Color          = Node::Color::Red;
-                sibling->m_Right->m_Color = Node::Color::Black;
-            }
-
-            sibling = parent->m_Left;
-
-            // sibling's left is red, sibling's right is black, sibling is black
-            // since one of sibling child is red cases are are reduce to only this case
-            // now compare to current node again.
-            if (sibling->m_Color         == Node::Color::Black &&
-                sibling->m_Left->m_Color == Node::Color::Red) {
-
-                sibling->m_Color         = parent->m_Color;
-                parent->m_Color          = Node::Color::Black;
-                sibling->m_Left->m_Color = Node::Color::Black;
+                if (sibling->m_Left)
+                    sibling->m_Left->m_Color = Node::Color::Black;
 
                 RotateRight(parent);
-                break;
             }
+
+            node = m_Root;
         }
     }
-}
 
-template <typename T>
-void RedBlackTree<T>::Transplant(Node* first, Node* second) {
-    if (!first->m_Parent)
-        m_Root = second;
-    else if (first == first->m_Parent->m_Left)
-        first->m_Parent->m_Left = second;
-    else
-        first->m_Parent->m_Right = second;
-
-    second->m_Parent = first->m_Parent;
+    node->m_Color = Node::Color::Black;
 }
 
 template <typename T>
 void RedBlackTree<T>::Print(const Node* node, const int& level, const char* caption) const {
     if (!node) {
-        std::cout << caption << ": null" << std::endl;
+        std::cout << caption << ": Null" << std::endl;
         return;
     }
 
@@ -506,11 +451,11 @@ void RedBlackTree<T>::Print(const Node* node, const int& level, const char* capt
 
         for (int i = 0; i < level; i++)
             std::cout << "| ";
-        Print(node->m_Left, level + 1, "left");
+        Print(node->m_Left, level + 1, "Left");
 
         for (int i = 0; i < level; i++)
             std::cout << "| ";
-        Print(node->m_Right, level + 1, "right");
+        Print(node->m_Right, level + 1, "Right");
 
         for (int i = 0; i < level - 1; i++)
             std::cout << "| ";

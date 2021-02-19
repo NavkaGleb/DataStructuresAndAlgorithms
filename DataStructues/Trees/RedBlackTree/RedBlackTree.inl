@@ -37,11 +37,13 @@ void RedBlackTree<T>::Node::Print() const {
 //////////////////////////////////////////////////////////////////////////////
 template <typename T>
 RedBlackTree<T>::RedBlackTree(const T& value) :
-    m_Root(new Node(value)) { }
+    m_Root(new Node(value)),
+    m_Size(0) { }
 
 template <typename T>
 RedBlackTree<T>::RedBlackTree(Node* root) :
-    m_Root(root) { }
+    m_Root(root),
+    m_Size(m_Root ? 1 : 0) { }
 
 template <typename T>
 RedBlackTree<T>::~RedBlackTree() {
@@ -98,6 +100,7 @@ T& RedBlackTree<T>::Push(const T& value) {
     if (!m_Root) {
         m_Root = new Node(value);
         m_Root->m_Color = Node::Color::Black;
+        ++m_Size;
 
         return m_Root->m_Value;
     }
@@ -376,15 +379,15 @@ void RedBlackTree<T>::PopFix(Node* node) {
 
                 sibling->m_Color = Node::Color::Red;
                 node             = parent;
-                parent           = node->m_Parent;
-            } else if (!sibling->m_Right || sibling->m_Right->m_Color == Node::Color::Black) {
-                sibling->m_Color = Node::Color::Red;
+            } else {
+                if (!sibling->m_Right || sibling->m_Right->m_Color == Node::Color::Black) {
+                    sibling->m_Color         = Node::Color::Red;
+                    sibling->m_Left->m_Color = Node::Color::Black;
 
-                RotateRight(sibling);
-                sibling = parent->m_Right;
-            }
+                    RotateRight(sibling);
+                    sibling = parent->m_Right;
+                }
 
-            if (parent) {
                 sibling->m_Color = parent->m_Color;
                 parent->m_Color  = Node::Color::Black;
 
@@ -392,9 +395,9 @@ void RedBlackTree<T>::PopFix(Node* node) {
                     sibling->m_Right->m_Color = Node::Color::Black;
 
                 RotateLeft(parent);
-            }
 
-            node = m_Root;
+                node = m_Root;
+            }
         } else {
             Node* sibling = parent->m_Left;
 
@@ -411,15 +414,15 @@ void RedBlackTree<T>::PopFix(Node* node) {
 
                 sibling->m_Color = Node::Color::Red;
                 node             = parent;
-                parent           = node->m_Parent;
-            } else if (!sibling->m_Left || sibling->m_Left->m_Color == Node::Color::Black) {
-                sibling->m_Color = Node::Color::Red;
+            } else {
+                if (!sibling->m_Left || sibling->m_Left->m_Color == Node::Color::Black) {
+                    sibling->m_Color          = Node::Color::Red;
+                    sibling->m_Right->m_Color = Node::Color::Black;
 
-                RotateLeft(sibling);
-                sibling = parent->m_Left;
-            }
+                    RotateLeft(sibling);
+                    sibling = parent->m_Left;
+                }
 
-            if (parent) {
                 sibling->m_Color = parent->m_Color;
                 parent->m_Color  = Node::Color::Black;
 
@@ -427,9 +430,9 @@ void RedBlackTree<T>::PopFix(Node* node) {
                     sibling->m_Left->m_Color = Node::Color::Black;
 
                 RotateRight(parent);
-            }
 
-            node = m_Root;
+                node = m_Root;
+            }
         }
     }
 

@@ -42,6 +42,7 @@ namespace DataStructures {
         explicit RedBlackTree(Node* root = nullptr);
         virtual ~RedBlackTree();
 
+        [[nodiscard]] inline bool IsEmpty() const  { return m_Size == 0; }
         [[nodiscard]] inline const Node* GetRoot() const { return m_Root; }
         [[nodiscard]] inline int GetSize() const { return m_Size; }
 
